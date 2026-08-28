@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSH 连接监控面板</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- ====== 左侧侧边栏 ====== -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </div>
+        <span class="logo-text">SSH Monitor</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-group">
+          <span class="nav-group-title">数据监控</span>
+          <a class="nav-item active" href="#" data-view="dashboard">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            <span>总览面板</span>
+          </a>
+          <a class="nav-item" href="#" data-view="connections">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 20h16"/><path d="M4 4h16"/><path d="M8 12h8"/><path d="M12 8v8"/>
+            </svg>
+            <span>连接列表</span>
+          </a>
+          <a class="nav-item" href="#" data-view="agent">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/>
+              <circle cx="6" cy="6" r="1"/><circle cx="6" cy="18" r="1"/>
+            </svg>
+            <span>本地 Agent 状态</span>
+          </a>
+          <a class="nav-item" href="#" data-view="alerts">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+              <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>告警日志</span>
+          </a>
+          <a class="nav-item" href="#" data-view="remote">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22 6 12 13 2 6"/><line x1="8" y1="21" x2="16" y2="21"/>
+            </svg>
+            <span>远程服务器</span>
+          </a>
+          <a class="nav-item" href="#" data-view="embed">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+              <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+            <span>Agent 列表</span>
+          </a>
+        </div>
+
+        <div class="nav-group">
+          <span class="nav-group-title">系统工具</span>
+          <a class="nav-item" href="#" data-view="settings">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+            <span>系统设置</span>
+          </a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- ====== 主内容区 ====== -->
+    <main class="main-content">
+      <header class="page-header">
+        <div class="page-title-area">
+          <h1 id="pageTitle">总览面板</h1>
+          <span class="subtitle" id="pageSubtitle">SSH 连接实时监控</span>
+        </div>
+        <div class="header-actions">
+          <span class="connection-badge" id="headerConnectionBadge">
+            <span class="badge-dot"></span>
+            <span id="headerConnCount">0</span> 连接
+          </span>
+          <span class="status-badge" id="headerSSHDStatus">
+            <span class="badge-dot"></span>
+            SSHD
+          </span>
+          <button class="btn btn-primary" onclick="refreshNow()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+            </svg>
+            刷新
+          </button>
+        </div>
+      </header>
+
+      <!-- ====== 视图容器 ====== -->
+      <div class="view-container">
+
+        <!-- 总览面板视图 -->
+        <div class="view active" id="view-dashboard">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#DBEAFE;color:#3B82F6">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 20h16"/><path d="M4 4h16"/><path d="M8 12h8"/><path d="M12 8v8"/>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">活跃连接</span>
+                <span class="stat-value" id="statActiveConns">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#D1FAE5;color:#10B981">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">独立用户</span>
+                <span class="stat-value" id="statUniqueUsers">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#FEF3C7;color:#F59E0B">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">今日峰值</span>
+                <span class="stat-value" id="statPeakToday">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#DBEAFE;color:#1A2436">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">运行时长</span>
+                <span class="stat-value" id="statUptime">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>连接趋势</h3>
+              <span class="card-badge" id="trendBadge">实时</span>
+            </div>
+            <div class="card-body">
+              <canvas id="trendChart" height="200"></canvas>
+              <div class="empty-state" id="trendEmpty">
+                <div class="empty-icon">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.5">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                </div>
+                <h4>等待数据</h4>
+                <p>收集足够采样点后将显示趋势图</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-row">
+            <div class="card half">
+              <div class="card-header">
+                <h3>系统状态</h3>
+              </div>
+              <div class="card-body">
+                <div class="info-table" id="systemInfoTable">
+                  <div class="info-row"><span class="info-label">主机名</span><span class="info-value" id="sysHostname">-</span></div>
+                  <div class="info-row"><span class="info-label">平台</span><span class="info-value" id="sysPlatform">-</span></div>
+                  <div class="info-row"><span class="info-label">内存使用</span><span class="info-value" id="sysMemory">-</span></div>
+                  <div class="info-row"><span class="info-label">CPU 核心</span><span class="info-value" id="sysCpus">-</span></div>
+                  <div class="info-row"><span class="info-label">系统负载</span><span class="info-value" id="sysLoad">-</span></div>
+                  <div class="info-row"><span class="info-label">运行时间</span><span class="info-value" id="sysUptime">-</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card half">
+              <div class="card-header">
+                <h3>SSH Agent 状态</h3>
+              </div>
+              <div class="card-body">
+                <div class="agent-status-block">
+                  <div class="agent-status-row">
+                    <span class="info-label">运行状态</span>
+                    <span class="pill-status" id="agentRunningStatus">检测中...</span>
+                  </div>
+                  <div class="agent-status-row">
+                    <span class="info-label">Agent PID</span>
+                    <span class="info-value" id="agentPid">-</span>
+                  </div>
+                  <div class="agent-status-row">
+                    <span class="info-label">通信套接字</span>
+                    <span class="info-value mono" id="agentSocket">-</span>
+                  </div>
+                  <div class="agent-status-row">
+                    <span class="info-label">已加载密钥</span>
+                    <span class="info-value" id="agentKeyCount">0</span>
+                  </div>
+                </div>
+                <div id="agentKeyList"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>SSH 服务 (sshd)</h3>
+              <span class="card-badge" id="sshdBadge">检测中...</span>
+            </div>
+            <div class="card-body">
+              <div class="info-table" id="sshdInfoTable">
+                <div class="info-row"><span class="info-label">进程数</span><span class="info-value" id="sshdCount">-</span></div>
+                <div class="info-row"><span class="info-label">进程 PID</span><span class="info-value mono" id="sshdPids">-</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 连接列表视图 -->
+        <div class="view" id="view-connections">
+          <div class="card">
+            <div class="card-header">
+              <h3>SSH 连接列表</h3>
+              <div class="header-right">
+                <span class="card-badge" id="connListCount">0 条记录</span>
+                <div class="filter-group">
+                  <button class="filter-btn active" data-filter="all">全部</button>
+                  <button class="filter-btn" data-filter="ESTABLISHED">已建立</button>
+                  <button class="filter-btn" data-filter="CLOSE_WAIT">等待关闭</button>
+                  <button class="filter-btn" data-filter="TIME_WAIT">等待超时</button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>源地址</th>
+                      <th>源端口</th>
+                      <th>连接目标</th>
+                      <th>状态</th>
+                      <th>登录用户</th>
+                      <th>进程 PID</th>
+                      <th>检测时间</th>
+                    </tr>
+                  </thead>
+                  <tbody id="connTableBody">
+                    <tr><td colspan="7" class="table-empty">暂无连接数据</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 本地 Agent 状态视图 -->
+        <div class="view" id="view-agent">
+          <div class="card-row">
+            <div class="card half">
+              <div class="card-header">
+                <h3>Agent 运行状态</h3>
+              </div>
+              <div class="card-body">
+                <div class="agent-detail-block">
+                  <div class="detail-item">
+                    <span class="detail-label">状态</span>
+                    <span class="pill-status" id="agentDetailStatus">检测中...</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">PID</span>
+                    <span class="detail-value mono" id="agentDetailPid">-</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">Socket</span>
+                    <span class="detail-value mono" id="agentDetailSocket">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card half">
+              <div class="card-header">
+                <h3>SSHD 服务</h3>
+              </div>
+              <div class="card-body">
+                <div class="agent-detail-block">
+                  <div class="detail-item">
+                    <span class="detail-label">运行状态</span>
+                    <span class="pill-status" id="sshdDetailStatus">检测中...</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">进程 PID</span>
+                    <span class="detail-value mono" id="sshdDetailPids">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>已加载密钥列表</h3>
+              <span class="card-badge" id="agentDetailKeyCount">0 个密钥</span>
+            </div>
+            <div class="card-body">
+              <div id="agentFullKeyList">
+                <div class="empty-state">
+                  <div class="empty-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.5">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                    </svg>
+                  </div>
+                  <h4>无已加载密钥</h4>
+                  <p>SSH Agent 运行中但没有加载密钥</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 告警日志视图 -->
+        <div class="view" id="view-alerts">
+          <div class="card">
+            <div class="card-header">
+              <h3>连接事件日志</h3>
+              <div class="header-right">
+                <span class="card-badge" id="alertCount">0 条</span>
+                <button class="btn btn-ghost" onclick="clearAlerts()">清空日志</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="alert-feed" id="alertFeed">
+                <div class="empty-state">
+                  <div class="empty-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.5">
+                      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                      <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                  </div>
+                  <h4>暂无告警</h4>
+                  <p>新的 SSH 连接或断开事件将在此显示</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 远程服务器视图 -->
+        <div class="view" id="view-remote">
+          <div class="card-row">
+            <div class="card half">
+              <div class="card-header">
+                <h3>远程连接状态</h3>
+                <span class="card-badge" id="remoteConnBadge">检测中...</span>
+              </div>
+              <div class="card-body">
+                <div class="info-table" id="remoteConnInfo">
+                  <div class="info-row"><span class="info-label">连接状态</span><span class="info-value" id="remoteConnected">检测中...</span></div>
+                  <div class="info-row"><span class="info-label">主机名</span><span class="info-value" id="remoteHostname">-</span></div>
+                  <div class="info-row"><span class="info-label">地址</span><span class="info-value mono" id="remoteAddress">Configured SSH host</span></div>
+                  <div class="info-row"><span class="info-label">登录用户</span><span class="info-value" id="remoteUser">bahe</span></div>
+                  <div class="info-row"><span class="info-label">上次采集</span><span class="info-value" id="remoteLastCheck">-</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card half">
+              <div class="card-header">
+                <h3>系统负载</h3>
+              </div>
+              <div class="card-body">
+                <div class="info-table" id="remoteLoadInfo">
+                  <div class="info-row"><span class="info-label">CPU 负载</span><span class="info-value" id="remoteLoad1">-</span></div>
+                  <div class="info-row"><span class="info-label">登录用户</span><span class="info-value" id="remoteUsers">-</span></div>
+                </div>
+                <div style="margin-top:16px">
+                  <h4 style="font-size:13px;font-weight:600;color:#5F6368;margin-bottom:8px">当前登录用户</h4>
+                  <div id="remoteUserList"><div class="empty-state" style="padding:12px"><h4 style="font-size:13px">暂无</h4></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-row">
+            <div class="card half">
+              <div class="card-header">
+                <h3>远程 SSHD 服务</h3>
+              </div>
+              <div class="card-body">
+                <div class="info-table" id="remoteSSHDInfo">
+                  <div class="info-row"><span class="info-label">运行状态</span><span class="info-value" id="remoteSSHDRunning">检测中...</span></div>
+                  <div class="info-row"><span class="info-label">进程数</span><span class="info-value" id="remoteSSHDCount">-</span></div>
+                  <div class="info-row"><span class="info-label">进程详情</span><span class="info-value mono" id="remoteSSHDDetail" style="font-size:11px">-</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card half">
+              <div class="card-header">
+                <h3>远程 SSH Agent</h3>
+              </div>
+              <div class="card-body">
+                <div class="info-table" id="remoteAgentInfo">
+                  <div class="info-row"><span class="info-label">运行状态</span><span class="info-value" id="remoteAgentRunning">检测中...</span></div>
+                  <div class="info-row"><span class="info-label">Agent PID</span><span class="info-value" id="remoteAgentPid">-</span></div>
+                  <div class="info-row"><span class="info-label">已加载密钥</span><span class="info-value" id="remoteAgentKeys">0</span></div>
+                </div>
+                <div style="margin-top:16px" id="remoteAgentKeyList"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>远程 SSH 连接 (ESTABLISHED)</h3>
+              <span class="card-badge" id="remoteConnCount">0</span>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>序号</th><th>本地地址</th><th>远程地址</th><th>状态</th></tr>
+                  </thead>
+                  <tbody id="remoteConnTableBody">
+                    <tr><td colspan="4" class="table-empty">暂无远程连接数据</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agent 列表视图(嵌入式) -->
+        <div class="view" id="view-embed">
+          <div class="card" style="padding:0;overflow:hidden;min-height:calc(100vh - 140px);height:auto;margin:0">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid #E5E7EB;background:#fff">
+              <h3 style="font-size:14px;font-weight:600">Agent 列表</h3>
+              <div style="display:flex;gap:8px">
+                <button class="btn" style="font-size:12px;padding:5px 14px;background:#475569;color:white;border:0;border-radius:6px;cursor:pointer" onclick="document.getElementById('agentPlatformFrame').src='/api/proxy/'">← 返回多 Agent 管理平台</button>
+                <a class="btn btn-primary" style="font-size:12px;padding:5px 14px;text-decoration:none" href="/api/proxy/" target="_blank">在新标签页打开</a>
+              </div>
+            </div>
+            <iframe id="agentPlatformFrame" src="/api/proxy/" style="width:100%;height:calc(100vh - 190px);border:none;min-height:400px"></iframe>
+          </div>
+        </div>
+
+        <!-- 设置视图 -->
+        <div class="view" id="view-settings">
+          <div class="card">
+            <div class="card-header">
+              <h3>系统设置</h3>
+            </div>
+            <div class="card-body">
+              <div class="settings-block">
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <span class="setting-label">刷新间隔</span>
+                    <span class="setting-desc">数据采集频率</span>
+                  </div>
+                  <span class="setting-value">3 秒</span>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <span class="setting-label">数据保留</span>
+                    <span class="setting-desc">连接趋势图采样点</span>
+                  </div>
+                  <span class="setting-value">120 个点</span>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <span class="setting-label">服务器地址</span>
+                    <span class="setting-desc">WebSocket 连接地址</span>
+                  </div>
+                  <span class="setting-value mono" id="settingServerAddr">http://localhost:4521</span>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-info">
+                    <span class="setting-label">服务运行时间</span>
+                  </div>
+                  <span class="setting-value" id="settingServerUptime">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/modules/utils.js"></script>
+  <script src="/js/modules/ui.js"></script>
+  <script src="/js/modules/render.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
+
