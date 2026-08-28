@@ -72,7 +72,10 @@ function httpGet(pathname) {
 // 获取 Agent 管理平台列表
 async function fetchAgentList() {
   try {
-    var loginRes = await httpPostJson('/login', { username: 'bahe', password: 'Bahe8888' });
+    var loginRes = await httpPostJson('/login', {
+      username: process.env.AGENT_USER || '',
+      password: process.env.AGENT_PASSWORD || ''
+    });
     if (!loginRes.includes('ok')) return [];
     var agentsData = await httpGet('/api/agents');
     if (agentsData && agentsData.startsWith('[')) return JSON.parse(agentsData);
